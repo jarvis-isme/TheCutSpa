@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Enums\OtpTypeEnum;
 use App\Models\User;
 use App\Models\VerifiedCode;
 use Carbon\Carbon;
@@ -14,21 +15,21 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Twilio\Rest\Client;
 use App\CodeAndMessage\UserMessage as UM;
-use App\Jobs\SendVerificationMail;
+use App\Http\Requests\UserRegistrationRequest;
 use App\Models\File;
 use App\Models\Product;
-use App\Models\ServiceOrder;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
     /** prefix */
-    const PREFIX = 'user';
+    const PREFIX = 'users';
 
     /** Api url */
     const API_URL_LOGIN = '/authentication/login';
     const API_URL_REGISTER = '/authentication/register';
-    const API_URL_SEND_CODE_TO = '/authentication/send-code-to';
+    const API_URL_OTP = '/otp';
     const API_URL_LOGOUT = '/logout';
     const API_URL_CHANGE_PASSWORD = '/change-password';
     const API_URL_RESET_PASSWORD = '/authentication/reset-password';
@@ -43,7 +44,7 @@ class UserController extends Controller
     /** Method */
     const METHOD_LOGIN = 'login';
     const METHOD_REGISTER = 'register';
-    const METHOD_SEND_CODE_TO = 'sendCodeTo';
+    const METHOD_SEND_OTP = 'sendOTP';
     const METHOD_LOGOUT = 'logout';
     const METHOD_CHANGE_PASSWORD = 'changePassword';
     const METHOD_RESET_PASSWORD = 'resetPassword';
@@ -55,42 +56,23 @@ class UserController extends Controller
     const METHOD_GET_PRODUCT_ORDERS = 'getProductOrders';
     const METHOD_GET_SERVICE_ORDERS = 'getServiceOrders';
 
-    // type of verified code
-    const TYPE_REGISTER = '0';
-    const TYPE_FORGOT_PASSWORD = '1';
-
     /**
      * @functionName: register
      * @type:         public
      * @param:        Request $request
      * @return:       String(Json)
      */
-    public function register(Request $request)
+    public function register(UserRegistrationRequest $request)
     {
         try {
-            $userId = $request->{User::VAL_USER_ID}; //phone number or email address
-            $code = $request->{User::VAL_CODE};
-            $channel = $request->{User::VAL_CHANNEL}; //phone or email
+            $validated = (object)$request->validated();
 
-            $name = $request->{User::COL_NAME};
-            $password = $request->{User::COL_PASSWORD};
-            $confirmPassword = $request->{User::VAL_CONFIRM_PASSWORD};
-            $gender = $request->{User::COL_GENDER};
-            $birthDay = $request->{User::COL_BIRTHDAY};
+            $userId = $validated->{User::VAL_USER_ID};
+            $channel = $validated->{User::VAL_CHANNEL};
+            $code = $validated->{User::VAL_CODE};
+            $name = $validated->{User::VAL_NAME};
+            $password = $validated->{User::VAL_PASSWORD};
 
-            $validator = User::validator([
-                User::VAL_USER_ID => $userId,
-                User::VAL_CODE => $code,
-                User::VAL_CHANNEL => $channel,
-                User::COL_NAME => $name,
-                User::COL_PASSWORD => $password,
-                User::VAL_CONFIRM_PASSWORD => $confirmPassword,
-                User::COL_BIRTHDAY => $birthDay,
-                User::COL_GENDER => $gender,
-            ], $channel);
-            if ($validator->fails()) {
-                return self::responseIER($validator->errors()->first());
-            }
             $existUser = User::where(User::COL_PHONE, $userId)
                 ->orWhere(User::COL_EMAIL, $userId)->first();
             if ($existUser) {
@@ -135,7 +117,7 @@ class UserController extends Controller
                 ];
                 array_push($dataImages, $dataImage);
             }
-            if (!$user or !File::insert($dataImages)) {
+            if (!$user || !File::insert($dataImages)) {
                 DB::rollBack();
                 return self::responseERR(UM::REGISTER_FAILED, UM::M_REGISTER_FAILED);
             }
@@ -143,13 +125,15 @@ class UserController extends Controller
             $tokenObj = $this->getToken($userId, $password);
             $data[User::ACCESS_TOKEN] = $tokenObj->access_token;
             return self::responseST(UM::REGISTER_SUCCESS, UM::M_REGISTER_SUCCESS, $data);
+        } catch (ValidationException $validationEx) {
+            return self::responseIER($validationEx->validator->errors()->first());
         } catch (Exception $ex) {
             DB::rollBack();
             return self::responseEX(UM::EXW_REGISTERING, $ex->getMessage());
         }
     }
 
-    public function sendCodeTo(Request $request)
+    public function sendOTP(Request $request)
     {
         try {
             $input = $request->all();
@@ -210,14 +194,13 @@ class UserController extends Controller
 
     private function sendBy($type, $receiver, $code)
     {
-        $message = "(TheCutSpa) $code is your authentication code. The code will expire in 5 minnutes";
+        $message = "(TheCutSpa) $code is your authentication code. The code will expire in 5 minutes";
         if ($type == VerifiedCode::EMAIL_CHANNEL) {
             $details = [
                 'code' => $code,
                 'email' => $receiver
             ];
-            Mail::to($receiver)->send(new \App\Mail\VerificationMail($details));
-
+            Mail::to($receiver)->queue(new \App\Mail\VerificationMail($details));
             return;
         }
         $this->sendMessage($message, $receiver);
@@ -225,30 +208,29 @@ class UserController extends Controller
 
     private function checkValidReceiverWithType(string $receiver, int $type)
     {
-        $isExistUser = (bool) User::where(User::COL_EMAIL, $receiver)->orWhere(User::COL_PHONE, $receiver)
+        $isExistUser = (bool) User::where(User::COL_EMAIL, $receiver)
+            ->orWhere(User::COL_PHONE, $receiver)
             ->first();
-        if ($isExistUser and $type === self::TYPE_REGISTER) {
-            $response = [
+        if ($isExistUser && $type === OtpTypeEnum::REGISTER->value) {
+            return [
                 self::KEY_CODE => 400,
                 self::KEY_DETAIL_CODE => UM::PHONE_OR_EMAIL_DUPLICATED,
                 self::KEY_MESSAGE => UM::M_PHONE_OR_EMAIL_DUPLICATED,
             ];
-            return $response;
-        } elseif (!$isExistUser and $type === self::TYPE_FORGOT_PASSWORD) {
-            $response = [
+        } elseif (!$isExistUser && $type === OtpTypeEnum::RESET_PASSWORD->value) {
+            return [
                 self::KEY_CODE => 400,
                 self::KEY_DETAIL_CODE => UM::PHONE_NUMBER_EXIST,
                 self::KEY_MESSAGE => UM::M_PHONE_NUMBER_EXIST,
             ];
-            return $response;
         }
         return true;
     }
 
     /**
      * Sends sms to user using Twilio's programmable sms client
-     * @param String $message Body of sms
-     * @param String $recipients string or array of phone number of recepient
+     * @param string $message Body of sms
+     * @param string $recipients string or array of phone number of recipients
      */
     private function sendMessage($message, $recipients)
     {

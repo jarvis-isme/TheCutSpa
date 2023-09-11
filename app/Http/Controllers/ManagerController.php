@@ -26,27 +26,27 @@ class ManagerController extends Controller
     const PREFIX = 'manager';
 
     /** Api url */
-    const API_URL_CREATE_STAFF = 'staff/create';
-    const API_URL_UPDATE_STAFF = 'staff/update/{staffId}';
-    const API_URL_DELETE_STAFF = 'staff/delete/{staffId}';
-    const API_URL_GET_ALL_STAFFS = 'staff/get-all';
-    const API_URL_GET_STAFF_BY_ID = 'staff/get/{staffId}';
+    const API_URL_CREATE_STAFF = 'create';
+    const API_URL_UPDATE_STAFF = 'update/{staffId}';
+    const API_URL_DELETE_STAFF = 'delete/{staffId}';
+    const API_URL_GET_ALL_STAFFS = 'get-all';
+    const API_URL_GET_STAFF_BY_ID = 'get/{staffId}';
 
-    const API_URL_CREATE_SHIFT = 'shift/create';
-    const API_URL_UPDATE_SHIFT = 'shift/update/{shiftId}';
-    const API_URL_DELETE_SHIFT = 'shift/delete/{shiftId}';
-    const API_URL_GET_ALL_SHIFTS = 'shift/get-all';
+    const API_URL_CREATE_SHIFT = 'create';
+    const API_URL_UPDATE_SHIFT = 'update/{shiftId}';
+    const API_URL_DELETE_SHIFT = 'delete/{shiftId}';
+    const API_URL_GET_ALL_SHIFTS = 'get-all';
 
-    const API_URL_GET_SERVICE_ORDER = 'service-order/get';
-    const API_URL_CONFIRM_SERVICE_ORDER = 'service-order/confirm/{orderId}';
-    const API_URL_CANCEL_SERVICE_ORDER = 'service-order/cancel/{orderId}';
-    const API_URL_MARK_COMPLETE_SERVICE_ORDER = 'service-order/mark-complete/{orderId}';
+    const API_URL_GET_SERVICE_ORDER = 'get';
+    const API_URL_CONFIRM_SERVICE_ORDER = 'confirm/{orderId}';
+    const API_URL_CANCEL_SERVICE_ORDER = 'cancel/{orderId}';
+    const API_URL_MARK_COMPLETE_SERVICE_ORDER = 'mark-complete/{orderId}';
 
-    const API_URL_GET_PRODUCT_ORDER = 'product-order/get';
-    const API_URL_CANCEL_PRODUCT_ORDER = 'product-order/cancel/{orderId}';
-    const API_URL_CONFIRM_PRODUCT_ORDER = 'product-order/confirm/{orderId}';
+    const API_URL_GET_PRODUCT_ORDER = 'get';
+    const API_URL_CANCEL_PRODUCT_ORDER = 'cancel/{orderId}';
+    const API_URL_CONFIRM_PRODUCT_ORDER = 'confirm/{orderId}';
 
-    const API_URL_GET_ALL_SKILLS = 'skill/get-all';
+    const API_URL_GET_ALL_SKILLS = 'get-all';
 
     /** Method */
     const METHOD_CREATE_STAFF = 'createStaff';

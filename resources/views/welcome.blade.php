@@ -415,6 +415,15 @@
 
   gtag('config', 'UA-210956551-1');
     </script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(function(OneSignal) {
+        OneSignal.init({
+          appId: "198a5b0c-0ab7-438f-a202-9a6db26a54a1",
+        });
+      });
+    </script>
 </head>
 
 <body class="antialiased">

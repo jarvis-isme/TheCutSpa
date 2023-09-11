@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Enums\RoleEnum;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -34,6 +35,8 @@ class User extends Authenticatable
     const COL_STORE_ID = 'store_id';
     const COL_CART = 'cart';
 
+    const ROLE_NAME = 'role_name';
+
     /** Value of model */
     const VAL_REMEMBER_TOKEN = 'remember_token';
     const VAL_CONFIRM_PASSWORD = 'confirmPassword';
@@ -48,6 +51,10 @@ class User extends Authenticatable
     const VAL_USER_ID = 'userId';
     const VAL_AVATAR = 'avatar';
     const VAL_ROLE_ID = 'roleId';
+    const VAL_NAME = 'name';
+    const VAL_PASSWORD = 'password';
+    const VAL_BIRTHDAY = 'birthDay';
+    const VAL_GENDER = 'gender';
 
     // Value
     const STAFF_ROLE_ID = 4;
@@ -97,7 +104,7 @@ class User extends Authenticatable
     protected $casts = [
         self::COL_EMAIL_VERIFIED_AT => 'datetime',
         self::COL_PHONE_VERIFIED_AT => 'datetime',
-        self::COL_CART => 'array',
+        self::COL_CART => 'array'
     ];
 
 
@@ -225,5 +232,9 @@ class User extends Authenticatable
     public function userShifts()
     {
         return $this->hasMany(UserShift::class, UserShift::COL_USER_ID, self::COL_ID);
+    }
+
+    public function role() {
+        return $this->hasOne(Role::class, Role::COL_ID, self::COL_ROLE_ID);
     }
 }
